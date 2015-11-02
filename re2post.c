@@ -1,9 +1,27 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "stack.h"
 #include "re2post.h"
 
-static char *__format(const char *re)
+static int op_attr[128] = {};
+
+#define ATTRIBUTE(pri) pri
+#define PRIORITY(c) op_attr[c]
+
+static void __init()
+{
+	op_attr['|'] = ATTRIBUTE(1);
+	op_attr['&'] = ATTRIBUTE(2);
+	op_attr['*'] = ATTRIBUTE(3);
+	op_attr['+'] = ATTRIBUTE(3);
+	op_attr['?'] = ATTRIBUTE(3);
+	op_attr['('] = ATTRIBUTE(4);
+	op_attr[')'] = ATTRIBUTE(4);
+}
+
+
+char *format(const char *re)
 {
 	size_t len = strlen(re);
 	char *formatted = (char*)malloc(len * 2);
@@ -29,17 +47,51 @@ static char *__format(const char *re)
 	return formatted;
 }
 
-const char *re2post(const char *src)
+char *re2post(const char *re)
 {
 	int top = 0;
-	size_t len = strlen(src);
-	char *stack = (char*)malloc(len);
-	
+	size_t len = strlen(re);
 
+	stack<char> *s = new stack<char>(len);
+
+	int post_pos = 0;
+	char *post = (char*)malloc(len);
+	
 	for (int i = 0; i < len; ++i)
 	{
-		
+		int c = re[len];
+		if (!PRIORITY(c)) {
+			post[post_pos++] = c;
+			continue;
+		}
+
+		if (s->empty()) {
+			s->push(c);
+		}
+		else {
+			int top = s->top();
+			int top_pri = PRIORITY(top);
+			int c_pri = PRIORITY(c);
+			while (top_pri >= c_pri) {
+				if (top != '(') {
+					post[post_pos++] = c;
+				}
+
+				s->pop();
+				if (s->empty()) {
+					break;
+				}
+				top = s->top();
+				top_pri = PRIORITY(top);
+			}
+		}
 	}
+
+	while (!s->empty()) {
+		post[post_pos++] = s->topAndPop();
+	}
+
+	return post;
 }
 
 int main(int argc, char *argv[]) 
@@ -49,8 +101,16 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	const char *formatted = __format(argv[1]);
+	__init();
+
+	char *formatted = format(argv[1]);
 	printf("%s\n", formatted);
+
+	char *post = re2post(formatted);
+	printf("%s\n", post);
+
+	free(formatted);
+	free(post);
 
 	return 0;
 }
