@@ -4,24 +4,49 @@
 #include "stack.h"
 #include "re2post.h"
 
-static int op_attr[128] = {};
+static unsigned char op_attr[128] = {};
 
-#define ATTRIBUTE(pri) pri
-#define PRIORITY(c) op_attr[c]
+/* n=Number of operands，
+** a=associative
+** p=priority
+*/
+enum AttrValue {
+	EMPTY 		= 0,
+
+	UNARY 		= 1,
+	BINARY 		= 2,
+
+	ASSO_LEFT 	= 1,
+	ASSO_RIGHT 	= 2,
+
+	PRI_1 		= 1,
+	PRI_2 		= 2,
+	PRI_3 		= 3,
+	PRI_4 		= 4,
+}
+
+#define ATTRIBUTE(n,a,p) ((n<<6) | (a<<4) | (p<<0))
+
+#define ISOP(c)     (op_attr[c] > 0)
+#define OPNUM(c)	((op_attr[c] & 0xc0) >> 6)
+
+#define ASSO(c)		((op_attr[c] & 0x30) >> 6)
+#define ISASSOLEFT(c) 	(ASSO(c) == ASSO_LEFT)
+#define ISASSORIGHT(c) 	(ASSO(c) == ASSO_RIGHT)
+
+#define PRI(c) 		((op_attr[c] & 0x0f) >> 0)
 
 static void __init()
 {
-	op_attr['|'] = ATTRIBUTE(1);
-	op_attr['&'] = ATTRIBUTE(2);
-	op_attr['*'] = ATTRIBUTE(3);
-	op_attr['+'] = ATTRIBUTE(3);
-	op_attr['?'] = ATTRIBUTE(3);
-	op_attr['('] = ATTRIBUTE(4);
-	op_attr[')'] = ATTRIBUTE(4);
+	op_attr['|'] = ATTRIBUTE(BINARY, ASSO_LEFT,  PRI_1);
+	op_attr['&'] = ATTRIBUTE(BINARY, ASSO_LEFT,  PRI_2);
+	op_attr['*'] = ATTRIBUTE(UNARY,  ASSO_RIGHT, PRI_3);
+	op_attr['+'] = ATTRIBUTE(UNARY,  ASSO_RIGHT, PRI_3);
+	op_attr['?'] = ATTRIBUTE(UNARY,  ASSO_RIGHT, PRI_3);
 }
 
 
-char *format(const char *re)
+static char *format(const char *re)
 {
 	size_t len = strlen(re);
 	char *formatted = (char*)malloc(len * 2);
@@ -52,46 +77,53 @@ char *re2post(const char *re)
 	int top = 0;
 	size_t len = strlen(re);
 
-	stack<char> *s = new stack<char>(len);
+	stack<char> s = stack<char>(len);
 
-	int post_pos = 0;
-	char *post = (char*)malloc(len);
+	int pos = 0;
+	char *out = (char*)malloc(len);
 	
-	for (int i = 0; i < len; ++i)
+	for (size_t i = 0; i < len; ++i)
 	{
-		int c = re[len];
-		if (!PRIORITY(c)) {
-			post[post_pos++] = c;
-			continue;
-		}
+		int c = re[i];
 
-		if (s->empty()) {
+		if ( ISOP(c) ) {
+			while ( !s->empty() ) {
+				unsigned char t = s->top();
+				if ( ISASSOLEFT(c) && PRI(c) <= PRI(t) || 
+					 ISASSORIGHT(c) && PRI(c) < PRI(t) ) {
+					s->pop();
+				}
+			}
+
 			s->push(c);
 		}
-		else {
-			int top = s->top();
-			int top_pri = PRIORITY(top);
-			int c_pri = PRIORITY(c);
-			while (top_pri >= c_pri) {
-				if (top != '(') {
-					post[post_pos++] = c;
-				}
-
-				s->pop();
-				if (s->empty()) {
-					break;
-				}
-				top = s->top();
-				top_pri = PRIORITY(top);
+		else if (c == '(') {
+			s->push(c);
+		}
+		else if (c == ')') {
+			while (!s->empty() && s->top() != '(') {
+				out[pos++] = s->topAndPop();
 			}
+
+			// stack is empty but not found '('
+			if (s->empty()) {
+				printf("mismatched parentheses\n");
+				free(out);
+				return NULL;
+			}
+
+			s->pop(); // pop '(' but not onto the output
+		}
+		else {
+			out[pos++] = c;
 		}
 	}
 
 	while (!s->empty()) {
-		post[post_pos++] = s->topAndPop();
+		out[pos++] = s->topAndPop();
 	}
 
-	return post;
+	return out;
 }
 
 int main(int argc, char *argv[]) 
