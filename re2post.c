@@ -23,14 +23,14 @@ enum AttrValue {
 	PRI_2 		= 2,
 	PRI_3 		= 3,
 	PRI_4 		= 4,
-}
+};
 
 #define ATTRIBUTE(n,a,p) ((n<<6) | (a<<4) | (p<<0))
 
 #define ISOP(c)     (op_attr[c] > 0)
 #define OPNUM(c)	((op_attr[c] & 0xc0) >> 6)
 
-#define ASSO(c)		((op_attr[c] & 0x30) >> 6)
+#define ASSO(c)		((op_attr[c] & 0x30) >> 4)
 #define ISASSOLEFT(c) 	(ASSO(c) == ASSO_LEFT)
 #define ISASSORIGHT(c) 	(ASSO(c) == ASSO_RIGHT)
 
@@ -87,40 +87,43 @@ char *re2post(const char *re)
 		int c = re[i];
 
 		if ( ISOP(c) ) {
-			while ( !s->empty() ) {
-				unsigned char t = s->top();
+			while ( !s.empty() ) {
+				unsigned char t = s.top();
 				if ( ISASSOLEFT(c) && PRI(c) <= PRI(t) || 
 					 ISASSORIGHT(c) && PRI(c) < PRI(t) ) {
-					s->pop();
+					out[pos++] = s.topAndPop();
 				}
+                else {
+                    break;
+                }
 			}
 
-			s->push(c);
+			s.push(c);
 		}
 		else if (c == '(') {
-			s->push(c);
+			s.push(c);
 		}
 		else if (c == ')') {
-			while (!s->empty() && s->top() != '(') {
-				out[pos++] = s->topAndPop();
+			while (!s.empty() && s.top() != '(') {
+				out[pos++] = s.topAndPop();
 			}
 
 			// stack is empty but not found '('
-			if (s->empty()) {
+			if (s.empty()) {
 				printf("mismatched parentheses\n");
 				free(out);
 				return NULL;
 			}
 
-			s->pop(); // pop '(' but not onto the output
+			s.pop(); // pop '(' but not onto the output
 		}
 		else {
 			out[pos++] = c;
 		}
 	}
 
-	while (!s->empty()) {
-		out[pos++] = s->topAndPop();
+	while (!s.empty()) {
+		out[pos++] = s.topAndPop();
 	}
 
 	return out;
