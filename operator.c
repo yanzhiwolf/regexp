@@ -1,16 +1,12 @@
 #include "operator.h"
 
-char op_attr[256] = {};
+unsigned char op_attr[128] = {};
 
-#define ATTRIBUTE(pri)
-static void __init()
+void init()
 {
-	op_attr['|'] = ATTRIBUTE(1);
-	op_attr['&'] = ATTRIBUTE(2);
-	op_attr['*'] = ATTRIBUTE(3);
-	op_attr['+'] = ATTRIBUTE(3);
-	op_attr['?'] = ATTRIBUTE(3);
-	op_attr['('] = ATTRIBUTE(4);
-	op_attr[')'] = ATTRIBUTE(4);
+	op_attr['|'] = ATTRIBUTE(BINARY, ASSO_LEFT,  PRI_1);
+	op_attr['&'] = ATTRIBUTE(BINARY, ASSO_LEFT,  PRI_2);
+	op_attr['*'] = ATTRIBUTE(UNARY,  ASSO_RIGHT, PRI_3);
+	op_attr['+'] = ATTRIBUTE(UNARY,  ASSO_RIGHT, PRI_3);
+	op_attr['?'] = ATTRIBUTE(UNARY,  ASSO_RIGHT, PRI_3);
 }
-
