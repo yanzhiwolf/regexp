@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "operator.h"
 #include "re2post.h"
+#include "nfa.h"
 
 
 int main(int argc, char *argv[]) 
@@ -15,6 +16,8 @@ int main(int argc, char *argv[])
 
 	char *post = re2post(argv[1]);
 	printf("%s\n", post);
+
+	post2nfa(post);
 
 	free(post);
 

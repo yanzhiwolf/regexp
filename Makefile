@@ -1,10 +1,12 @@
 
-CC= g++
+CC= g++ -std=c++11
 
-re: re2post.o operator.o main.o 
+re: nfa.o re2post.o operator.o main.o 
 	$(CC) -o $@ $^
 
 
+nfa.o: nfa.c nfa.h
+	$(CC) -c $<
 
 re2post.o: re2post.c re2post.h operator.h
 	$(CC) -c $<

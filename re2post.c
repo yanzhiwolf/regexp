@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "stack.h"
+#include <stack>
 #include "operator.h"
 #include "re2post.h"
 
@@ -40,7 +40,7 @@ char *re2post(const char *re)
 
 	size_t len = strlen(p);
 
-	stack<char> s = stack<char>(len);
+	std::stack<char> s;
 
 	int pos = 0;
 	char *out = (char*)malloc(len);
@@ -48,14 +48,14 @@ char *re2post(const char *re)
 	for (size_t i = 0; i < len; i++)
 	{
 		int c = p[i];
-		printf("%c\n", c);
 
 		if ( ISOP(c) ) {
 			while ( !s.empty() ) {
 				unsigned char t = s.top();
 				if ( ISASSOLEFT(c) && PRI(c) <= PRI(t) || 
 					 ISASSORIGHT(c) && PRI(c) < PRI(t) ) {
-					out[pos++] = s.topAndPop();
+					out[pos++] = s.top();
+					s.pop();
 				}
                 else {
                     break;
@@ -69,7 +69,8 @@ char *re2post(const char *re)
 		}
 		else if (c == ')') {
 			while (!s.empty() && s.top() != '(') {
-				out[pos++] = s.topAndPop();
+				out[pos++] = s.top();
+				s.pop();
 			}
 
 			// stack is empty but not found '('
@@ -86,7 +87,8 @@ char *re2post(const char *re)
 	}
 
 	while (!s.empty()) {
-		out[pos++] = s.topAndPop();
+		out[pos++] = s.top();
+		s.pop();
 	}
 
 	free(p);
