@@ -56,21 +56,24 @@ public:
 			return "SPLIT";
 		}
 		else {
-			return "END";
+			return "MATCH";
 		}
 	}
 	void draw(int times)
 	{
 		drawTimes = times;
 
+		if (c == MATCH) {
+			fprintf(fp, "\t%s_%d [ shape = doublecircle ]\n", name(), times);
+		}
 		if (out != 0) {
-			fprintf(fp, "%s -> %s\n", name(), out->name());
+			fprintf(fp, "%s_%d -> %s_%d\n", name(), times, out->name(), times);
 			if (out->drawTimes != times) {
 				out->draw(times);
 			}
 		}
 		if (out1 != 0) {
-			fprintf(fp, "%s -> %s\n", name(), out1->name());
+			fprintf(fp, "%s_%d -> %s_%d\n", name(), times, out1->name(), times);
 			if (out1->drawTimes != times) {
 				out1->draw(times);
 			}
@@ -150,7 +153,7 @@ void drawNfa(const FragStack &stk, int times)
 
 	for (size_t i = 0; i < stk.size(); i++) {
 		stk[i]->draw(times);
-		fprintf(fp, "\tstruct1:f%d -> %s\n", i, stk[i]->name());
+		fprintf(fp, "\tstruct1:f%d -> %s_%d\n", i, stk[i]->name(), times);
 	}
 }
 
