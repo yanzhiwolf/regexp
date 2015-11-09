@@ -43,7 +43,7 @@ char *re2post(const char *re)
 	std::stack<char> s;
 
 	int pos = 0;
-	char *out = (char*)malloc(len);
+	char *out = (char*)malloc(len+1);
 	
 	for (size_t i = 0; i < len; i++)
 	{
@@ -90,6 +90,7 @@ char *re2post(const char *re)
 		out[pos++] = s.top();
 		s.pop();
 	}
+	out[pos] = 0;
 
 	free(p);
 	return out;

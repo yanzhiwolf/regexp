@@ -13,8 +13,8 @@ FILE *fp = 0;
 bool begin(int index)
 {
 	char buf[256] = {};
-	sprintf(buf, "./nfa_%d.dot", index);
-	fp = fopen(buf, "a+");
+	sprintf(buf, "./output/nfa_%02d.dot", index);
+	fp = fopen(buf, "w+");
 	if (!fp) {
 		assert(false);
 		return false;
@@ -24,6 +24,8 @@ bool begin(int index)
 	//fprintf(fp, "\trankdir=LR;\n");
     fprintf(fp, "\tsize=\"8,5\"\n");
     fprintf(fp, "\tnode [shape = circle];\n");
+
+	return true;
 }
 
 void end()
@@ -40,8 +42,9 @@ void end()
 class State
 {
 public:
-	State() : c(MATCH), out(NULL), out1(NULL), lastlist(0) {}
-	State(int c, State *out, State *out1) : c(c), out(out), out1(out1), lastlist(0)
+	State() : c(MATCH), out(NULL), out1(NULL), lastlist(0), drawTimes(0) {}
+	State(int c, State *out, State *out1) : 
+		c(c), out(out), out1(out1), lastlist(0), drawTimes(0)
 	{
 	}
 
@@ -56,15 +59,21 @@ public:
 			return "END";
 		}
 	}
-	void draw()
+	void draw(int times)
 	{
+		drawTimes = times;
+
 		if (out != 0) {
 			fprintf(fp, "%s -> %s\n", name(), out->name());
-			out->draw();
+			if (out->drawTimes != times) {
+				out->draw(times);
+			}
 		}
 		if (out1 != 0) {
 			fprintf(fp, "%s -> %s\n", name(), out1->name());
-			out1->draw();
+			if (out1->drawTimes != times) {
+				out1->draw(times);
+			}
 		}
 	}
 
@@ -72,6 +81,7 @@ public:
 	State *out;
 	State *out1;
 	int lastlist;
+	int drawTimes;
 };
 typedef std::list<State**> Ptrlist;
 
@@ -97,9 +107,9 @@ public:
 		}
 		return "";
 	}
-	void draw() {
+	void draw(int times) {
 		if (start) {
-			start->draw();
+			start->draw(times);
 		}
 	}
 	State *start;
@@ -121,32 +131,31 @@ Ptrlist list1(State **outp)
 Ptrlist append(const Ptrlist &l1, const Ptrlist &l2)
 {
 	Ptrlist lst;
-	std::copy(l1.begin(), l1.end(), lst.end());
-	std::copy(l2.begin(), l2.end(), lst.end());
+	lst.insert(lst.end(), l1.begin(), l1.end());
+	lst.insert(lst.end(), l2.begin(), l2.end());
 	return lst;
 }
 
-void drawNfa(const FragStack &stk)
+void drawNfa(const FragStack &stk, int times)
 {
 	fprintf(fp, "\trankdir=LR;\n");
 	fprintf(fp, "\tnode[shape=record]\n");
-	fprintf(fp, "struct1: [label=\"");
+	fprintf(fp, "\tstruct1 [label=\"");
 	for (size_t i = 0; i < stk.size(); i++) {
 		fprintf(fp, "<f%d> %d|", i, i);
 	}
-	fprintf(fp, "\"];");
+	fprintf(fp, "\"];\n");
 	fprintf(fp, "\trankdir=TB;\n");
 	fprintf(fp, "\tnode [shape=circle];\n");
 
 	for (size_t i = 0; i < stk.size(); i++) {
-		stk[i]->draw();
-		fprintf(fp, "struct1:f%d -> %s\n", i, stk[i]->name());
+		stk[i]->draw(times);
+		fprintf(fp, "\tstruct1:f%d -> %s\n", i, stk[i]->name());
 	}
 }
 
 State *post2nfa(char *postfix)
 {
-	char *p;
 	FragStack stk;
 
 	int index = 0;
@@ -201,7 +210,7 @@ State *post2nfa(char *postfix)
 		}
 
 		begin(index);
-		drawNfa(stk);
+		drawNfa(stk, index);
 		end();
 	}
 
@@ -209,6 +218,11 @@ State *post2nfa(char *postfix)
 	FragPtr f = stk.back();
 	stk.pop_back();
 	f->patchTo(&match);
+
+	stk.push_back(f);
+	begin(index);
+	drawNfa(stk, index);
+	end();
 
 	return f->start;
 }

@@ -18,4 +18,4 @@ main.o: main.c re2post.h operator.h
 	$(CC) -c $<
 
 clean:
-	rm -f *.o re.exe
+	rm -f *.o *.exe output/*
